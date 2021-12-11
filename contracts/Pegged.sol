@@ -50,9 +50,12 @@ contract Pegged is Ownable {
         collateral = _collateral;
     }
 
+    // A new option is created by the controllers on the protocol. Either creator or owner. 
+    // Specify the base asset, the expiry in unix time, the fee on settlement, the oracle, and the price at which we consider peg broken
     function newOption(address want, uint32 _expiry, uint16 _fee, address _oracle, uint256 _unpeggedPrice) public onlyTrusted returns(uint256 id){
-        PeggedERC20 yes = new PeggedERC20("KEEPPEG", "KEEPPEG", want);
-        PeggedERC20 no = new PeggedERC20("LOSEPEG", "LOSEPEG", want);
+        require(_expiry > now, "Already Expired");
+        PeggedERC20 yes = new PeggedERC20("KEEPPEG", "KEEPPEG", want, options.length);
+        PeggedERC20 no = new PeggedERC20("LOSEPEG", "LOSEPEG", want, options.length);
 
         options.push(Option(
             {
@@ -68,6 +71,7 @@ contract Pegged is Ownable {
         return options.length -1;
     }
 
+    //we can mint and burn at any time provided we have the correct balance 
     function mint(uint256 id, uint256 amount) public {
         IERC20(collateral).safeTransferFrom(msg.sender, address(this), amount);
         require(id < options.length, "Invalid ID");
@@ -76,6 +80,15 @@ contract Pegged is Ownable {
         op.nopeg.mint(msg.sender, amount);
     }
 
+    function burn(uint256 id, uint256 amount) public {
+        require(id < options.length, "Invalid ID");
+        Option memory op = options[id];
+        op.peg.burn(msg.sender, amount);
+        op.nopeg.burn(msg.sender, amount);
+        IERC20(collateral).safeTransfer(msg.sender, amount);
+    }
+
+    // we can settle early if the peg is broken. or after expiry if the peg is still strong
     function settle(uint256 id) public returns (Settlement){
         require(id < options.length, "Invalid ID");
         Option storage op = options[id]; //must be storage
@@ -111,21 +124,14 @@ contract Pegged is Ownable {
         if(amount > 0){
             //calculate fee
             uint256 fee = amount.mul(op.fee).div(1000);
-            IERC20(collateral).safeTransfer(msg.sender, fee);
+            IERC20(collateral).safeTransfer(treasury, fee);
             IERC20(collateral).safeTransfer(msg.sender, amount.sub(fee));
         }
 
     }
 
-    function burn(uint256 id, uint256 amount) public {
-        require(id < options.length, "Invalid ID");
-        Option memory op = options[id];
-        op.peg.burn(msg.sender, amount);
-        op.nopeg.burn(msg.sender, amount);
-        IERC20(collateral).safeTransfer(msg.sender, amount);
-    }
 
-    //todo check oracle and curve pool balance
+    // check oracle and curve pool balance
     function isUnPegged(uint256 id) public view returns (bool){
         return AggregatorV3Interface(options[id].oracle).latestAnswer() < options[id].unpeggedPrice;
     }
