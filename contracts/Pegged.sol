@@ -31,7 +31,6 @@ contract Pegged is Ownable {
     using SafeMath for uint256;
 
     address public creator; //address that can create insurance
-    address public immutable erc20Implementation;
     address public treasury;
     address public collateral;
     Option[] public options;
@@ -42,20 +41,18 @@ contract Pegged is Ownable {
     }
 
     constructor (
-        address _erc20Implementation,
         address _creator,
         address _treasury,
         address _collateral
         ) public Ownable(){
-        erc20Implementation = _erc20Implementation;
         creator = _creator;
         treasury = _treasury;
         collateral = _collateral;
     }
 
-    function newOption(address pool, address want, uint32 _expiry, uint16 _fee, address _oracle, uint256 _unpeggedPrice) public onlyTrusted returns(uint256 id){
-        PeggedERC20 yes = new PeggedERC20("KEEPPEG", "", pool, want);
-        PeggedERC20 no = new PeggedERC20("LOSEPEG", "", pool, want);
+    function newOption(address want, uint32 _expiry, uint16 _fee, address _oracle, uint256 _unpeggedPrice) public onlyTrusted returns(uint256 id){
+        PeggedERC20 yes = new PeggedERC20("KEEPPEG", "KEEPPEG", want);
+        PeggedERC20 no = new PeggedERC20("LOSEPEG", "LOSEPEG", want);
 
         options.push(Option(
             {
@@ -80,12 +77,13 @@ contract Pegged is Ownable {
     }
 
     function settle(uint256 id) public returns (Settlement){
+        require(id < options.length, "Invalid ID");
         Option storage op = options[id]; //must be storage
         require(op.settlementStatus == Settlement.NOTSETTLED, "AlreadySettled");
         if(isUnPegged(id)){
             op.settlementStatus = Settlement.UNPEGGED;
             
-        }else if(op.expiry > now){
+        }else if(op.expiry < now){
             op.settlementStatus = Settlement.PEGGED;
         }
 
@@ -94,6 +92,7 @@ contract Pegged is Ownable {
 
     //function for collecting payout. if the market is settled then burn the tokens related to the settlement
     function collect(uint256 id) public returns (uint256 amount){
+        require(id < options.length, "Invalid ID");
         Option memory op = options[id];
         require(op.settlementStatus != Settlement.NOTSETTLED, "NotSettled");
         uint256 amount;

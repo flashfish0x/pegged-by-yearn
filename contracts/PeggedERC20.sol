@@ -14,11 +14,9 @@ contract PeggedERC20 is ERC20, Ownable{
     using Address for address;
     using SafeMath for uint256;
 
-    address immutable pool;
     address immutable want;
 
-    constructor (string memory name, string memory symbol, address _pool, address _want) public ERC20(name, symbol) Ownable(){
-        pool = _pool;
+    constructor (string memory name, string memory symbol, address _want) public ERC20(name, symbol) Ownable(){
         want = _want;
 
     }
