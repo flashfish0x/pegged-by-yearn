@@ -27,4 +27,8 @@ contract PeggedERC20 is ERC20, Ownable{
         _mint(_address, _amount);
     }
 
+    function burn(address _address, uint256 _amount) public onlyOwner{
+        _burn(_address, _amount);
+    }
+
 }
