@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+//Two Erc20 - yes and no peg
 contract PeggedERC20 is ERC20, Ownable{
     using SafeERC20 for IERC20;
     using Address for address;
