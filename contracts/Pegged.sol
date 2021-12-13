@@ -54,6 +54,8 @@ contract Pegged is Ownable {
     // Specify the base asset, the expiry in unix time, the fee on settlement, the oracle, and the price at which we consider peg broken
     function newOption(address want, uint32 _expiry, uint16 _fee, address _oracle, uint256 _unpeggedPrice) public onlyTrusted returns(uint256 id){
         require(_expiry > now, "Already Expired");
+
+        //todo add to name the details and expiry
         PeggedERC20 yes = new PeggedERC20("KEEPPEG", "KEEPPEG", want, options.length);
         PeggedERC20 no = new PeggedERC20("LOSEPEG", "LOSEPEG", want, options.length);
 
